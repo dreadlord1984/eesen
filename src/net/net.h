@@ -43,6 +43,7 @@ class Net {
   ~Net(); 
 
  public:
+  
   /// Perform forward pass through the network
   void Propagate(const CuMatrixBase<BaseFloat> &in, CuMatrix<BaseFloat> *out); 
   /// Perform backward pass through the network
@@ -64,7 +65,7 @@ class Net {
   /// Sets the c'th layer to "layer", taking ownership of the pointer
   /// and deleting the corresponding one that we own.
   void SetLayer(int32 c, Layer *layer);
- 
+  
   /// Remove component
   void RemoveLayer(int32 c);
   void RemoveLastLayer() { RemoveLayer(NumLayers()-1); }
@@ -88,9 +89,11 @@ class Net {
   /// Initialize MLP from config
   void Init(const std::string &config_file);
   /// Read the MLP from file (can add layers to exisiting instance of Net)
-  void Read(const std::string &file);  
+  void Read(const std::string &file);
+  void Read(const std::string &file, bool convertparal);
   /// Read the MLP from stream (can add layers to exisiting instance of Net)
-  void Read(std::istream &in, bool binary);  
+  void Read(std::istream &in, bool binary);
+  void Read(std::istream &in, bool binary, bool convertparal);
   /// Re-read a MLP from file (of the same structure of current Net)
   void ReRead(const std::string &file);
   /// Re-read a MLP from stream (of the same structure of current Net)
@@ -123,6 +126,9 @@ class Net {
   /// Relese the memory
   void Destroy();
 
+  /// sets the update algorithm that backprogate uses through the network
+  void SetUpdateAlgorithm(std::string opt);
+
   /// Set training hyper-parameters to the network and its TrainableLayer(s)
   void SetTrainOptions(const NetTrainOptions& opts);
   /// Get training hyper-parameters from the network
@@ -147,6 +153,8 @@ class Net {
 
   /// Option class with hyper-parameters passed to TrainableLayer(s)
   NetTrainOptions opts_;
+
+  UpdateRule update_algorithm;
 };
   
 

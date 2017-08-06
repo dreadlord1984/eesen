@@ -30,7 +30,7 @@ class Ctc {
  public:
   Ctc() : frames_(0), sequences_num_(0), ref_num_(0), error_num_(0), 
           frames_progress_(0), ref_num_progress_(0), error_num_progress_(0),
-          sequences_progress_(0), obj_progress_(0.0), report_step_(100) { }
+          sequences_progress_(0), obj_progress_(0.0), report_step_(100), frames_per_sec_(100.0) { }
   ~Ctc() { }
 
   /// CTC training over a single sequence from the labels. The errors are returned to [diff]
@@ -48,10 +48,13 @@ class Ctc {
   void ErrorRate(const CuMatrixBase<BaseFloat> &net_out, const std::vector<int32> &label, float* err, std::vector<int32> *hyp);
 
   /// Compute token error rate over multiple sequences. 
-  void ErrorRateMSeq(const std::vector<int> &frame_num_utt, const CuMatrixBase<BaseFloat> &net_out, std::vector< std::vector<int> > &label);
+  void ErrorRateMSeq(const std::vector<int> &frame_num_utt, const CuMatrixBase<BaseFloat> &net_out, std::vector< std::vector<int> > &label, std::string &out);
 
   /// Set the step of reporting
   void SetReportStep(int32 report_step) { report_step_ = report_step;  }
+
+  /// Set frames per second
+  void SetFramesPerSec(float frames_per_sec) { frames_per_sec_ = frames_per_sec;  }
 
   /// Generate string with report
   std::string Report();
@@ -73,6 +76,7 @@ class Ctc {
   double obj_progress_;              // registry for the optimization objective
 
   int32 report_step_;                // report obj and accuracy every so many sequences/utterances
+  float frames_per_sec_;
 
   std::vector<int32> label_expand_;  // expanded version of the label sequence
   CuMatrix<BaseFloat> alpha_;        // alpha values

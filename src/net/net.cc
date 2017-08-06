@@ -100,7 +100,7 @@ void Net::Backpropagate(const CuMatrixBase<BaseFloat> &out_diff, CuMatrix<BaseFl
                               backpropagate_buf_[i+1], &backpropagate_buf_[i]);
     if (layers_[i]->IsTrainable()) {
       TrainableLayer *tl = dynamic_cast<TrainableLayer*>(layers_[i]);
-      tl->Update(propagate_buf_[i], backpropagate_buf_[i+1]);
+      tl->Update(propagate_buf_[i], backpropagate_buf_[i+1], update_algorithm);
     }
   }
   // eventually export the derivative
@@ -234,6 +234,17 @@ void Net::Init(const std::string &file) {
   Check();
 }
 
+  void Net::Read(const std::string &file, bool convertparal) {
+  bool binary;
+  Input in(file, &binary);
+  Read(in.Stream(), binary, convertparal);
+  in.Close();
+  // Warn if the NN is empty
+  if(NumLayers() == 0) {
+    KALDI_WARN << "The network '" << file << "' is empty.";
+  }
+}
+
 void Net::Read(const std::string &file) {
   bool binary;
   Input in(file, &binary);
@@ -245,6 +256,25 @@ void Net::Read(const std::string &file) {
   }
 }
 
+  void Net::Read(std::istream &is, bool binary, bool convertparal) {
+  // get the network layers from a factory
+  Layer *layer;
+  while (NULL != (layer = Layer::Read(is, binary, convertparal))) {
+    if (NumLayers() > 0 && layers_.back()->OutputDim() != layer->InputDim()) {
+      KALDI_ERR << "Dimensionality mismatch!"
+                << " Previous layer output:" << layers_.back()->OutputDim()
+                << " Current layer input:" << layer->InputDim();
+    }
+    layers_.push_back(layer);
+  }
+  // create empty buffers
+  propagate_buf_.resize(NumLayers()+1);
+  backpropagate_buf_.resize(NumLayers()+1);
+  // reset learn rate
+  opts_.learn_rate = 0.0;
+
+  Check(); //check consistency (dims...)
+}
 
 void Net::Read(std::istream &is, bool binary) {
   // get the network layers from a factory
@@ -408,6 +438,22 @@ void Net::Destroy() {
   backpropagate_buf_.resize(0);
 }
 
+void Net::SetUpdateAlgorithm(std::string opt) {
+  if (opt.compare("SGD")==0) {
+    KALDI_LOG << "Selecting SGD with momentum as optimization algorithm.";
+    update_algorithm=sgd_update;
+  }else if (opt.compare("Adagrad")==0) {
+    KALDI_LOG << "Selecting Adagrad as optimization algorithm.";
+    update_algorithm=adagrad_update;
+  }else if (opt.compare("RMSProp")==0) {
+    KALDI_LOG << "Selecting RMSProp as optimization algorithm.";
+    update_algorithm=rmsprop_update;
+  }else{
+    KALDI_ERR << "This optimization algorithm is unsupported: " << opt;
+    KALDI_LOG << "Selecting SGD with momentum as optimization algorithm.";
+    update_algorithm=sgd_update;
+  }
+}
 
 void Net::SetTrainOptions(const NetTrainOptions& opts) {
   opts_ = opts;
